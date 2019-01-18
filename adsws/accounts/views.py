@@ -658,7 +658,7 @@ class Bootstrap(Resource):
     for the bumblebee javascript client to authenticate and interact with
     other adsws-api resources.
     """
-    
+
     decorators = [oauth2.optional_oauth()]
 
     def get(self):
@@ -684,26 +684,26 @@ class Bootstrap(Resource):
         parser.add_argument('client_name', type=str)
         parser.add_argument('ratelimit', type=float)
         parser.add_argument('create_new', type=inputs.boolean)
-        
+
         kwargs = parser.parse_args()
 
         client_name = kwargs.get('client_name', None)
         redirect_uri = kwargs.get('redirect_uri', None)
         ratelimit = kwargs.get('ratelimit', 1.0)
         create_new = kwargs.get('create_new', False)
-        
+
         if ratelimit is None:
             ratelimit = 1.0
-        
+
         assert ratelimit >= 0.0
-        
+
         # If we visit this endpoint and are unauthenticated, then login as
         # our anonymous user
-        if not current_user.is_authenticated():            
+        if not current_user.is_authenticated():
             login_user(user_manipulator.first(
                 email=current_app.config['BOOTSTRAP_USER_EMAIL']
             ))
-        
+
         if current_user.email == current_app.config['BOOTSTRAP_USER_EMAIL']:
             if 'scopes' in kwargs or client_name or redirect_uri:
                 abort(401, "Sorry, you cant change scopes/name/redirect_uri when creating temporary OAuth application")
@@ -742,8 +742,8 @@ class Bootstrap(Resource):
                     client, token = self.bootstrap_user(client_name, scopes=scopes, ratelimit=ratelimit)
             except ValidationError, e:
                 return {'error': e.value}, 400
-        
-            
+
+
 
             if scopes:
                 client._default_scopes = scopes
@@ -766,47 +766,47 @@ class Bootstrap(Resource):
 
         db.session.commit()
         return output
-    
+
     def _check_ratelimit(self, ratelimit):
         """Method to verify that there exists available space in the allotted resources
         available to this user. A user account can have unlimited 'ratelimit_level'
-        if the ratelimit_level=-1, or the ratelimit_level specifies how big the global 
+        if the ratelimit_level=-1, or the ratelimit_level specifies how big the global
         amount is."""
-        
+
         # we are always called with some user logged in
         allowed_limit = current_user.ratelimit_level or 2.0
         if allowed_limit == -1:
             return True
-        
+
         # count the existing clients
         used = db.session.query(func.sum(OAuthClient.ratelimit).label('sum')).filter(OAuthClient.user_id==current_user.get_id()).first()[0] or 0.0
-            
+
         if allowed_limit - (used+ratelimit) < 0:
             raise ValidationError('The current user account (%s) does not have enough capacity to create a new client. Requested: %s, Available: %s' % (current_user.email, ratelimit, allowed_limit-used))
         return True
 
-         
+
     def _sanitize_scopes(self, scopes):
         """Makes sure that one can request only scopes that are available
         to the given user."""
         if not scopes:
             return
-        
+
         if hasattr(request, 'oauth'):
             allowed_scopes = request.oauth.user.allowed_scopes
         elif current_user:
             allowed_scopes = current_user.allowed_scopes
         else:
             raise ValidationError('kabooom') # should NEVER ever happen
-        
+
         if '*' in allowed_scopes:
             return scopes
         scopes = set(scopes.split())
         if not set(allowed_scopes).issuperset(scopes):
             raise ValidationError('You have requested a scope not available to the current user')
-        return ' '.join(sorted(set(allowed_scopes).intersection(scopes))) 
-        
-         
+        return ' '.join(sorted(set(allowed_scopes).intersection(scopes)))
+
+
     @staticmethod
     def load_client(clientid):
         """
@@ -863,7 +863,7 @@ class Bootstrap(Resource):
             is_confidential=False,
             is_internal=True,
             _default_scopes=scopes,
-            ratelimit=1.0
+            ratelimit=1000000.0
         )
         client.gen_salt()
 
@@ -887,7 +887,7 @@ class Bootstrap(Resource):
         """
         assert current_user.email != current_app.config['BOOTSTRAP_USER_EMAIL']
         self._check_ratelimit(ratelimit)
-        
+
         uid = current_user.get_id()
         client_name = client_name or current_app.config.get('BOOTSTRAP_CLIENT_NAME', 'BB client')
 
@@ -924,7 +924,7 @@ class Bootstrap(Resource):
         :return: OAuthToken instance
         """
         assert current_user.email != current_app.config['BOOTSTRAP_USER_EMAIL']
-        
+
         uid = current_user.get_id()
         client_name = client_name or current_app.config.get('BOOTSTRAP_CLIENT_NAME', 'BB client')
 
