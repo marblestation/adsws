@@ -1,6 +1,7 @@
 from ..core import AdsWSError, AdsWSFormError, JSONEncoder
 from .. import factory
 
+from flask.ext.session import Session
 from flask.ext.restful import Api
 from flask.ext.cors import CORS
 from flask import jsonify
@@ -19,6 +20,8 @@ def create_app(**kwargs_config):
 
     # Overwrite WWW-Authenticate challenge on 401
     api.unauthorized = lambda noop: noop
+
+    app = Session(app)
 
     CORS(
         app,
