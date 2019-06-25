@@ -26,7 +26,7 @@ def create_app(**kwargs_config):
     if flask_session_type == "redis":
         flask_session_redis_host = app.config.get('FLASK_SESSION_REDIS_HOST')
         flask_session_redis_port = app.config.get('FLASK_SESSION_REDIS_PORT')
-        flask_session_redis_db = app.config.get('FLASK_SESSION_REDIS_PORT', 0)
+        flask_session_redis_db = app.config.get('FLASK_SESSION_REDIS_DB', 0)
         if flask_session_redis_host and flask_session_redis_port:
             app.config['SESSION_REDIS'] = Redis(host=flask_session_redis_host, port=flask_session_redis_port, db=flask_session_redis_db)
             Session(app)
