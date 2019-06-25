@@ -2,6 +2,7 @@ from ..core import AdsWSError, AdsWSFormError, JSONEncoder
 from .. import factory
 
 from flask.ext.session import Session
+from redis import Redis
 from flask.ext.restful import Api
 from flask.ext.cors import CORS
 from flask import jsonify
@@ -21,7 +22,16 @@ def create_app(**kwargs_config):
     # Overwrite WWW-Authenticate challenge on 401
     api.unauthorized = lambda noop: noop
 
-    app = Session(app)
+    flask_session_type = app.config.get('SESSION_TYPE')
+    if flask_session_type == "redis":
+        flask_session_redis_host = app.config.get('FLASK_SESSION_REDIS_HOST')
+        flask_session_redis_port = app.config.get('FLASK_SESSION_REDIS_PORT')
+        flask_session_redis_db = app.config.get('FLASK_SESSION_REDIS_PORT', 0)
+        if flask_session_redis_host and flask_session_redis_port:
+            app.config['SESSION_REDIS'] = Redis(host=flask_session_redis_host, port=flask_session_redis_port, db=flask_session_redis_db)
+            Session(app)
+        else:
+            app.config['SESSION_TYPE'] = None
 
     CORS(
         app,
